@@ -2,6 +2,11 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 
 ## Getting Started
 
+- https://github.com/lint-staged/lint-staged
+- https://github.com/typicode/husky
+- https://prettier.io/
+- https://www.prisma.io/
+
 First, run the development server:
 
 ```bash
