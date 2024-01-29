@@ -1,0 +1,1598 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id                 Int       @id @default(autoincrement())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime?
+  expiresAt          DateTime?
+  handle             String    @unique
+  hashedSessionToken String?
+  antiCSRFToken      String?
+  publicData         String?
+  privateData        String?
+  userId             BigInt?   @db.UnsignedBigInt
+  users              users?    @relation(fields: [userId], references: [id], map: "user_id_session_foreign")
+
+  @@index([userId], map: "user_id_session_foreign")
+}
+
+model Token {
+  id          Int       @id @default(autoincrement())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime?
+  hashedToken String
+  type        String
+  expiresAt   DateTime
+  sentTo      String
+  userId      BigInt    @db.UnsignedBigInt
+  users       users     @relation(fields: [userId], references: [id], map: "user_id_token_foreign")
+
+  @@unique([hashedToken, type])
+  @@index([userId], map: "user_id_token_foreign")
+}
+
+model authorization_mission {
+  authorization_id BigInt         @db.UnsignedBigInt
+  mission_id       BigInt         @db.UnsignedBigInt
+  authorizations   authorizations @relation(fields: [authorization_id], references: [id], onDelete: Cascade, map: "authorization_mission_authorization_id_foreign")
+  missions         missions       @relation(fields: [mission_id], references: [id], onDelete: Cascade, map: "authorization_mission_mission_id_foreign")
+
+  @@id([authorization_id, mission_id])
+  @@index([mission_id], map: "authorization_mission_mission_id_foreign")
+}
+
+model authorizations {
+  id                    BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  name                  String                  @db.VarChar(255)
+  file                  String?                 @db.VarChar(255)
+  start                 DateTime                @db.Date
+  end                   DateTime                @db.Date
+  created_at            DateTime?               @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  authorization_mission authorization_mission[]
+  locations             locations[]
+}
+
+model box_segment {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  box_id     BigInt   @db.UnsignedBigInt
+  segment_id BigInt   @db.UnsignedBigInt
+  boxes      boxes    @relation(fields: [box_id], references: [id], onDelete: Cascade, map: "box_segment_box_id_foreign")
+  segments   segments @relation(fields: [segment_id], references: [id], onDelete: Cascade, map: "box_segment_segment_id_foreign")
+
+  @@index([box_id], map: "box_segment_box_id_foreign")
+  @@index([segment_id], map: "box_segment_segment_id_foreign")
+}
+
+model box_types {
+  id              BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  name            String            @db.TinyText
+  nb_cassettes    Int
+  created_at      DateTime?         @db.Timestamp(0)
+  updated_at      DateTime?         @db.Timestamp(0)
+  boxes           boxes[]
+  room_box_audits room_box_audits[]
+}
+
+model boxes {
+  id          BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  reference   String        @db.VarChar(255)
+  room_id     BigInt        @db.UnsignedBigInt
+  created_at  DateTime?     @db.Timestamp(0)
+  updated_at  DateTime?     @db.Timestamp(0)
+  is_damaged  Boolean       @default(false)
+  comment     String?       @db.Text
+  type_id     BigInt?       @db.UnsignedBigInt
+  box_segment box_segment[]
+  rooms       rooms         @relation(fields: [room_id], references: [id], onDelete: Cascade, map: "boxes_room_id_foreign")
+  box_types   box_types?    @relation(fields: [type_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "boxes_type_id_foreign")
+  cassettes   cassettes[]
+
+  @@index([room_id], map: "boxes_room_id_foreign")
+  @@index([type_id], map: "boxes_type_id_foreign")
+}
+
+model cassette_types {
+  id           BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  size         Int
+  has_splitter Boolean     @default(false)
+  created_at   DateTime?   @db.Timestamp(0)
+  updated_at   DateTime?   @db.Timestamp(0)
+  cassettes    cassettes[]
+}
+
+model cassettes {
+  id             BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  box_id         BigInt         @db.UnsignedBigInt
+  type_id        BigInt         @db.UnsignedBigInt
+  created_at     DateTime?      @db.Timestamp(0)
+  updated_at     DateTime?      @db.Timestamp(0)
+  boxes          boxes          @relation(fields: [box_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "cassettes_box_id_foreign")
+  cassette_types cassette_types @relation(fields: [type_id], references: [id], onUpdate: Restrict, map: "cassettes_type_id_foreign")
+  weldings       weldings[]
+
+  @@index([box_id], map: "cassettes_box_id_foreign")
+  @@index([type_id], map: "cassettes_type_id_foreign")
+}
+
+model cities {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name         String    @db.VarChar(255)
+  study_number String?   @db.VarChar(255)
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @db.Timestamp(0)
+}
+
+model client_origins {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @db.TinyText
+  color      String    @db.TinyText
+  is_active  Boolean
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model client_statuses {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  name       String    @db.TinyText
+  color      String    @db.TinyText
+  is_active  Boolean
+  clients    clients[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model clients {
+  id                                      BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  company                                 String?              @db.VarChar(255)
+  phone                                   String?              @db.VarChar(255)
+  country                                 String?              @db.VarChar(255)
+  city                                    String?              @db.VarChar(255)
+  address                                 String?              @db.VarChar(255)
+  postal_code                             String?              @db.VarChar(255)
+  created_at                              DateTime?            @db.Timestamp(0)
+  updated_at                              DateTime?            @db.Timestamp(0)
+  user_id                                 BigInt               @db.UnsignedBigInt
+  siret                                   String?              @db.VarChar(255)
+  address2                                String?              @db.VarChar(255)
+  commercial_partner_id                   BigInt?              @db.UnsignedBigInt
+  client_status_id                        BigInt?              @db.UnsignedBigInt
+  commercial_user_id                      BigInt?              @db.UnsignedBigInt
+  comment                                 String?              @default("") @db.Text
+  is_active                               Boolean              @default(true)
+  intracommunity_vat                      String?              @db.VarChar(255)
+  client_origins_id                       BigInt               @default(1) @db.UnsignedBigInt
+  is_subscribed_to_newsletter             Boolean              @default(false)
+  is_invitation_mail_sended               Boolean?             @default(false)
+  client_statuses                         client_statuses?     @relation(fields: [client_status_id], references: [id], onUpdate: SetNull, map: "clients_client_status_id_foreign")
+  commercial_partners                     commercial_partners? @relation(fields: [commercial_partner_id], references: [id], onUpdate: SetNull, map: "clients_commercial_partner_id_foreign")
+  users_clients_commercial_user_idTousers users?               @relation("clients_commercial_user_idTousers", fields: [commercial_user_id], references: [id], onUpdate: SetNull, map: "clients_commercial_user_id_foreign")
+  users_clients_user_idTousers            users                @relation("clients_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, map: "clients_user_id_foreign")
+  contacts                                contacts[]
+  contracts                               contracts[]
+  tickets                                 tickets[]
+
+  @@index([client_status_id], map: "clients_client_status_id_foreign")
+  @@index([commercial_partner_id], map: "clients_commercial_partner_id_foreign")
+  @@index([commercial_user_id], map: "clients_commercial_user_id_foreign")
+  @@index([user_id], map: "clients_user_id_foreign")
+}
+
+model commercial_partner_documents {
+  id                    BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at            DateTime?           @db.Timestamp(0)
+  updated_at            DateTime?           @db.Timestamp(0)
+  file                  String              @db.VarChar(255)
+  user_id               BigInt              @db.UnsignedBigInt
+  commercial_partner_id BigInt              @db.UnsignedBigInt
+  commercial_partners   commercial_partners @relation(fields: [commercial_partner_id], references: [id], onDelete: Cascade, map: "commercial_partner_documents_commercial_partner_id_foreign")
+  users                 users               @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "commercial_partner_documents_user_id_foreign")
+
+  @@index([commercial_partner_id], map: "commercial_partner_documents_commercial_partner_id_foreign")
+  @@index([user_id], map: "commercial_partner_documents_user_id_foreign")
+}
+
+model commercial_partners {
+  id                           BigInt                         @id @default(autoincrement()) @db.UnsignedBigInt
+  name                         String                         @db.TinyText
+  description                  String                         @default("") @db.VarChar(255)
+  is_active                    Boolean                        @default(true)
+  created_at                   DateTime?                      @db.Timestamp(0)
+  updated_at                   DateTime?                      @db.Timestamp(0)
+  clients                      clients[]
+  commercial_partner_documents commercial_partner_documents[]
+  contacts                     contacts[]
+}
+
+model companies {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @db.VarChar(255)
+  phone      String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model contact_form_submissions {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  firstname  String    @db.TinyText
+  lastname   String    @db.TinyText
+  email      String    @db.TinyText
+  phone      String    @db.TinyText
+  company    String    @db.TinyText
+  message    String    @db.Text
+  product    String    @db.TinyText
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  is_done    Boolean   @default(false)
+}
+
+model contact_types {
+  id         BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at DateTime?  @db.Timestamp(0)
+  updated_at DateTime?  @db.Timestamp(0)
+  name       String     @db.TinyText
+  color      String     @db.TinyText
+  is_active  Boolean
+  contacts   contacts[]
+}
+
+model contacts {
+  id                    BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  firstname             String?              @db.VarChar(255)
+  lastname              String?              @db.VarChar(255)
+  phone                 String?              @db.VarChar(255)
+  email                 String?              @db.VarChar(255)
+  job                   String?              @db.VarChar(255)
+  civility              String?              @db.VarChar(255)
+  client_id             BigInt?              @db.UnsignedBigInt
+  created_at            DateTime?            @db.Timestamp(0)
+  updated_at            DateTime?            @db.Timestamp(0)
+  contact_type_id       BigInt?              @db.UnsignedBigInt
+  commercial_partner_id BigInt?              @db.UnsignedBigInt
+  clients               clients?             @relation(fields: [client_id], references: [id], onDelete: Cascade, map: "contacts_client_id_foreign")
+  commercial_partners   commercial_partners? @relation(fields: [commercial_partner_id], references: [id], onDelete: Cascade, map: "contacts_commercial_partner_id_foreign")
+  contact_types         contact_types?       @relation(fields: [contact_type_id], references: [id], onUpdate: Restrict, map: "contacts_contact_type_id_foreign")
+
+  @@index([client_id], map: "contacts_client_id_foreign")
+  @@index([commercial_partner_id], map: "contacts_commercial_partner_id_foreign")
+  @@index([contact_type_id], map: "contacts_contact_type_id_foreign")
+}
+
+model contract_product_options {
+  id                         BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at                 DateTime?         @db.Timestamp(0)
+  updated_at                 DateTime?         @db.Timestamp(0)
+  contract_product_id        BigInt            @db.UnsignedBigInt
+  product_option_id          BigInt            @db.UnsignedBigInt
+  name                       String            @default("0") @db.TinyText
+  quantity                   Int               @default(0)
+  price                      Float             @default(0.00)
+  operating_cost             Float             @default(0.00)
+  price_discount             Float             @default(0.00)
+  operating_cost_discount    Float             @default(0.00)
+  is_monthly                 Boolean           @default(true)
+  is_operating_cost_invoiced Boolean           @default(false)
+  is_active                  Boolean           @default(true)
+  contract_products          contract_products @relation(fields: [contract_product_id], references: [id], onDelete: Cascade, map: "contract_product_options_contract_product_id_foreign")
+  product_options            product_options   @relation(fields: [product_option_id], references: [id], onDelete: Cascade, map: "contract_product_options_product_option_id_foreign")
+
+  @@index([contract_product_id], map: "contract_product_options_contract_product_id_foreign")
+  @@index([product_option_id], map: "contract_product_options_product_option_id_foreign")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model contract_products {
+  id                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at               DateTime?                  @db.Timestamp(0)
+  updated_at               DateTime?                  @db.Timestamp(0)
+  contract_id              BigInt                     @db.UnsignedBigInt
+  product_id               BigInt?                    @db.UnsignedBigInt
+  name                     String                     @default("") @db.TinyText
+  description              String                     @default("") @db.Text
+  quantity                 Int                        @default(0)
+  commitment               Int                        @default(0)
+  auto_renew               Boolean                    @default(true)
+  is_monthly               Boolean                    @default(false)
+  price                    Float                      @default(0.00)
+  operating_cost           Float                      @default(0.00)
+  price_discount           Float                      @default(0.00)
+  price_discount_duration  Int                        @default(0)
+  operating_cost_discount  Float                      @default(0.00)
+  is_anticipated_billing   Boolean                    @default(true)
+  instance                 String?                    @db.TinyText
+  interface                String?                    @db.TinyText
+  contract_product_options contract_product_options[]
+  contracts                contracts                  @relation(fields: [contract_id], references: [id], onDelete: Cascade, map: "contract_products_contract_id_foreign")
+  products                 products?                  @relation(fields: [product_id], references: [id], onDelete: Cascade, map: "contract_products_product_id_foreign")
+  subscription_products    subscription_products[]
+
+  @@index([contract_id], map: "contract_products_contract_id_foreign")
+  @@index([product_id], map: "contract_products_product_id_foreign")
+}
+
+model contract_status {
+  id                        BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at                DateTime?                   @db.Timestamp(0)
+  updated_at                DateTime?                   @db.Timestamp(0)
+  name                      String                      @db.TinyText
+  color                     String                      @db.TinyText
+  is_active                 Boolean
+  order_position            Int                         @default(0)
+  contract_status_histories contract_status_histories[]
+  contracts                 contracts[]
+}
+
+model contract_status_histories {
+  id                 BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at         DateTime?       @db.Timestamp(0)
+  updated_at         DateTime?       @db.Timestamp(0)
+  contract_id        BigInt          @db.UnsignedBigInt
+  contract_status_id BigInt          @db.UnsignedBigInt
+  user_id            BigInt          @db.UnsignedBigInt
+  contracts          contracts       @relation(fields: [contract_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "contract_status_histories_contract_id_foreign")
+  contract_status    contract_status @relation(fields: [contract_status_id], references: [id], onDelete: Cascade, map: "contract_status_histories_contract_status_id_foreign")
+  users              users           @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "contract_status_histories_user_id_foreign")
+
+  @@index([contract_id], map: "contract_status_histories_contract_id_foreign")
+  @@index([contract_status_id], map: "contract_status_histories_contract_status_id_foreign")
+  @@index([user_id], map: "contract_status_histories_user_id_foreign")
+}
+
+model contracts {
+  id                        BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at                DateTime?                   @db.Timestamp(0)
+  updated_at                DateTime?                   @db.Timestamp(0)
+  client_id                 BigInt                      @db.UnsignedBigInt
+  contract_status_id        BigInt?                     @db.UnsignedBigInt
+  due_date_started_at       DateTime?                   @db.Timestamp(0)
+  periodicity               Int                         @default(1)
+  estimated_delivery_at     DateTime?                   @db.Date
+  payment_method_id         BigInt?                     @db.UnsignedBigInt
+  comment                   String?                     @db.Text
+  is_without_vat            Boolean                     @default(false)
+  contract_products         contract_products[]
+  contract_status_histories contract_status_histories[]
+  clients                   clients                     @relation(fields: [client_id], references: [id], onDelete: Cascade, map: "contracts_client_id_foreign")
+  contract_status           contract_status?            @relation(fields: [contract_status_id], references: [id], onUpdate: Restrict, map: "contracts_contract_status_id_foreign")
+  payment_methods           payment_methods?            @relation(fields: [payment_method_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "contracts_payment_method_id_foreign")
+  invoices                  invoices[]
+  purchase_orders           purchase_orders[]
+  subscriptions             subscriptions[]
+
+  @@index([client_id], map: "contracts_client_id_foreign")
+  @@index([contract_status_id], map: "contracts_contract_status_id_foreign")
+  @@index([payment_method_id], map: "contracts_payment_method_id_foreign")
+}
+
+model date_offs {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  start       DateTime  @db.Date
+  end         DateTime  @db.Date
+  details     String    @db.VarChar(255)
+  location_id BigInt    @db.UnsignedBigInt
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+  locations   locations @relation(fields: [location_id], references: [id], onDelete: Cascade, map: "date_offs_location_id_foreign")
+
+  @@index([location_id], map: "date_offs_location_id_foreign")
+}
+
+model document_codes {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  code       BigInt    @unique(map: "document_codes_code_unique")
+  invoices   invoices?
+}
+
+model eligibility_request_analytics {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  eligibility_id String    @db.TinyText
+  address        String    @db.Text
+  lat            Float
+  lng            Float
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+  company        String?   @db.Text
+  owned          Boolean   @default(false)
+  provider       Boolean   @default(false)
+}
+
+model failed_jobs {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  uuid       String   @unique(map: "failed_jobs_uuid_unique") @db.VarChar(255)
+  connection String   @db.Text
+  queue      String   @db.Text
+  payload    String   @db.LongText
+  exception  String   @db.LongText
+  failed_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model fibers {
+  id                                BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  color                             String     @db.TinyText
+  tube_id                           BigInt     @db.UnsignedBigInt
+  created_at                        DateTime?  @db.Timestamp(0)
+  updated_at                        DateTime?  @db.Timestamp(0)
+  is_broken                         Boolean    @default(false)
+  tubes                             tubes      @relation(fields: [tube_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fibers_tube_id_foreign")
+  weldings_weldings_from_idTofibers weldings[] @relation("weldings_from_idTofibers")
+  weldings_weldings_to_idTofibers   weldings[] @relation("weldings_to_idTofibers")
+
+  @@index([tube_id], map: "fibers_tube_id_foreign")
+}
+
+model invoice_lines {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @db.Timestamp(0)
+  invoice_id       BigInt    @db.UnsignedBigInt
+  name             String?   @db.VarChar(255)
+  description      String?   @db.Text
+  quantity         Float     @default(0.00)
+  discount_percent Float     @default(0.00)
+  price_ht         Float     @default(0.00)
+  total_ht         Float     @default(0.00)
+  invoices         invoices  @relation(fields: [invoice_id], references: [id], onDelete: Cascade, map: "invoice_lines_invoice_id_foreign")
+
+  @@index([invoice_id], map: "invoice_lines_invoice_id_foreign")
+}
+
+model invoices {
+  id                       BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at               DateTime?               @db.Timestamp(0)
+  updated_at               DateTime?               @db.Timestamp(0)
+  is_debit                 Boolean                 @default(true)
+  document_code_id         BigInt                  @unique(map: "invoices_document_code_id_unique") @db.UnsignedBigInt
+  contract_id              BigInt?                 @db.UnsignedBigInt
+  subscription_id          BigInt?                 @db.UnsignedBigInt
+  subscription_deadline_id BigInt?                 @db.UnsignedBigInt
+  from_company             String?                 @db.VarChar(255)
+  from_city                String?                 @db.VarChar(255)
+  from_postal_code         String?                 @db.VarChar(255)
+  from_address             String?                 @db.VarChar(255)
+  to_company               String?                 @db.VarChar(255)
+  to_city                  String?                 @db.VarChar(255)
+  to_postal_code           String?                 @db.VarChar(255)
+  to_address               String?                 @db.VarChar(255)
+  to_address2              String?                 @db.VarChar(255)
+  to_vat_number            String?                 @db.VarChar(255)
+  total_ht                 Float                   @default(0.00)
+  total_vat                Float                   @default(0.00)
+  total_ttc                Float                   @default(0.00)
+  from_date                DateTime?               @db.Date
+  to_date                  DateTime?               @db.Date
+  is_sent                  Boolean                 @default(false)
+  invoice_lines            invoice_lines[]
+  contracts                contracts?              @relation(fields: [contract_id], references: [id], map: "invoices_contract_id_foreign")
+  document_codes           document_codes          @relation(fields: [document_code_id], references: [id], onUpdate: Restrict, map: "invoices_document_code_id_foreign")
+  subscription_deadlines   subscription_deadlines? @relation(fields: [subscription_deadline_id], references: [id], map: "invoices_subscription_deadline_id_foreign")
+  subscriptions            subscriptions?          @relation(fields: [subscription_id], references: [id], map: "invoices_subscription_id_foreign")
+  payments                 payments[]
+
+  @@index([contract_id], map: "invoices_contract_id_foreign")
+  @@index([subscription_deadline_id], map: "invoices_subscription_deadline_id_foreign")
+  @@index([subscription_id], map: "invoices_subscription_id_foreign")
+}
+
+model locations {
+  id               BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at       DateTime?      @db.Timestamp(0)
+  updated_at       DateTime?      @db.Timestamp(0)
+  address          String         @db.VarChar(255)
+  night            Boolean
+  authorization_id BigInt         @db.UnsignedBigInt
+  date_offs        date_offs[]
+  authorizations   authorizations @relation(fields: [authorization_id], references: [id], onDelete: Cascade, map: "locations_authorization_id_foreign")
+
+  @@index([authorization_id], map: "locations_authorization_id_foreign")
+}
+
+model material_rack {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  quantity    Int?
+  material_id BigInt    @db.UnsignedBigInt
+  rack_id     BigInt    @db.UnsignedBigInt
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+  materials   materials @relation(fields: [material_id], references: [id], onDelete: Cascade, map: "material_rack_material_id_foreign")
+  racks       racks     @relation(fields: [rack_id], references: [id], onDelete: Cascade, map: "material_rack_rack_id_foreign")
+
+  @@index([material_id], map: "material_rack_material_id_foreign")
+  @@index([rack_id], map: "material_rack_rack_id_foreign")
+}
+
+model materials {
+  id            BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  name          String          @db.VarChar(255)
+  description   String?         @db.Text
+  barcode       String?         @db.VarChar(255)
+  created_at    DateTime?       @db.Timestamp(0)
+  updated_at    DateTime?       @db.Timestamp(0)
+  material_rack material_rack[]
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model mission_puller {
+  mission_id BigInt   @db.UnsignedBigInt
+  user_id    BigInt   @db.UnsignedBigInt
+  missions   missions @relation(fields: [mission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "mission_puller_mission_id_foreign")
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "mission_puller_user_id_foreign")
+
+  @@unique([mission_id, user_id], map: "mission_puller_mission_id_user_id_unique")
+  @@index([user_id], map: "mission_puller_user_id_foreign")
+}
+
+model mission_status_histories {
+  id               BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at       DateTime?        @db.Timestamp(0)
+  updated_at       DateTime?        @db.Timestamp(0)
+  status_id        BigInt           @db.UnsignedBigInt
+  mission_id       BigInt           @db.UnsignedBigInt
+  user_id          BigInt?          @db.UnsignedBigInt
+  missions         missions         @relation(fields: [mission_id], references: [id], onDelete: Cascade, map: "mission_status_histories_mission_id_foreign")
+  mission_statuses mission_statuses @relation(fields: [status_id], references: [id], onUpdate: Restrict, map: "mission_status_histories_status_id_foreign")
+
+  @@index([mission_id], map: "mission_status_histories_mission_id_foreign")
+  @@index([status_id], map: "mission_status_histories_status_id_foreign")
+}
+
+model mission_statuses {
+  id                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  name                     String                     @db.VarChar(255)
+  color                    String                     @db.VarChar(255)
+  icon                     String                     @db.VarChar(255)
+  created_at               DateTime?                  @db.Timestamp(0)
+  updated_at               DateTime?                  @db.Timestamp(0)
+  mission_status_histories mission_status_histories[]
+  missions                 missions[]
+}
+
+model missions {
+  id                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  project_id               Int
+  name                     String                     @db.VarChar(255)
+  ref_orange               String                     @db.VarChar(255)
+  description              String?                    @db.VarChar(255)
+  status_id                BigInt                     @db.UnsignedBigInt
+  welder_id                BigInt?                    @db.UnsignedBigInt
+  created_at               DateTime?                  @db.Timestamp(0)
+  updated_at               DateTime?                  @db.Timestamp(0)
+  authorization_mission    authorization_mission[]
+  mission_puller           mission_puller[]
+  mission_status_histories mission_status_histories[]
+  mission_statuses         mission_statuses           @relation(fields: [status_id], references: [id], onUpdate: Restrict, map: "missions_status_id_foreign")
+  users                    users?                     @relation(fields: [welder_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "missions_welder_id_foreign")
+  pullers                  pullers[]
+  segments                 segments[]
+
+  @@index([status_id], map: "missions_status_id_foreign")
+  @@index([welder_id], map: "missions_welder_id_foreign")
+}
+
+model model_has_permissions {
+  permission_id BigInt      @db.UnsignedBigInt
+  model_type    String      @db.VarChar(255)
+  model_id      BigInt      @db.UnsignedBigInt
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "model_has_permissions_permission_id_foreign")
+
+  @@id([permission_id, model_id, model_type])
+  @@index([model_id, model_type], map: "model_has_permissions_model_id_model_type_index")
+}
+
+model model_has_roles {
+  role_id    BigInt @db.UnsignedBigInt
+  model_type String @db.VarChar(255)
+  model_id   BigInt @db.UnsignedBigInt
+  roles      roles  @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "model_has_roles_role_id_foreign")
+
+  @@id([role_id, model_id, model_type])
+  @@index([model_id, model_type], map: "model_has_roles_model_id_model_type_index")
+}
+
+model modulos {
+  id              BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  name            String            @db.VarChar(100)
+  created_at      DateTime?         @db.Timestamp(0)
+  updated_at      DateTime?         @db.Timestamp(0)
+  wire_capacities wire_capacities[]
+  wires           wires[]
+}
+
+model oauth_access_tokens {
+  id         String    @id @db.VarChar(100)
+  user_id    BigInt?   @db.UnsignedBigInt
+  client_id  BigInt    @db.UnsignedBigInt
+  name       String?   @db.VarChar(255)
+  scopes     String?   @db.Text
+  revoked    Boolean
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  expires_at DateTime? @db.DateTime(0)
+
+  @@index([user_id], map: "oauth_access_tokens_user_id_index")
+}
+
+model oauth_auth_codes {
+  id         String    @id @db.VarChar(100)
+  user_id    BigInt    @db.UnsignedBigInt
+  client_id  BigInt    @db.UnsignedBigInt
+  scopes     String?   @db.Text
+  revoked    Boolean
+  expires_at DateTime? @db.DateTime(0)
+
+  @@index([user_id], map: "oauth_auth_codes_user_id_index")
+}
+
+model oauth_clients {
+  id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                BigInt?   @db.UnsignedBigInt
+  name                   String    @db.VarChar(255)
+  secret                 String?   @db.VarChar(100)
+  provider               String?   @db.VarChar(255)
+  redirect               String    @db.Text
+  personal_access_client Boolean
+  password_client        Boolean
+  revoked                Boolean
+  created_at             DateTime? @db.Timestamp(0)
+  updated_at             DateTime? @db.Timestamp(0)
+
+  @@index([user_id], map: "oauth_clients_user_id_index")
+}
+
+model oauth_personal_access_clients {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  client_id  BigInt    @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model oauth_refresh_tokens {
+  id              String    @id @db.VarChar(100)
+  access_token_id String    @db.VarChar(100)
+  revoked         Boolean
+  expires_at      DateTime? @db.DateTime(0)
+
+  @@index([access_token_id], map: "oauth_refresh_tokens_access_token_id_index")
+}
+
+model orange_orders {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  quantity         Int?
+  client_reference String?   @db.VarChar(255)
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @db.Timestamp(0)
+}
+
+model ovh_telephony_reports {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+  phone_line     String    @db.VarChar(20)
+  calling_number String    @db.VarChar(20)
+  dialed_number  String    @db.VarChar(20)
+  called_number  String    @db.VarChar(20)
+  datetime       DateTime  @db.DateTime(0)
+  duration       Float
+  price_ht       Float
+  id_ovh         BigInt    @unique(map: "id_ovh")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model password_resets {
+  email      String    @db.VarChar(255)
+  token      String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+
+  @@index([email], map: "password_resets_email_index")
+  @@ignore
+}
+
+model path_room {
+  id      BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  path_id BigInt @db.UnsignedBigInt
+  room_id BigInt @db.UnsignedBigInt
+  paths   paths  @relation(fields: [path_id], references: [id], onDelete: Cascade, map: "path_room_path_id_foreign")
+  rooms   rooms  @relation(fields: [room_id], references: [id], onDelete: Cascade, map: "path_room_room_id_foreign")
+
+  @@index([path_id], map: "path_room_path_id_foreign")
+  @@index([room_id], map: "path_room_room_id_foreign")
+}
+
+model paths {
+  id          BigInt                          @id @default(autoincrement()) @db.UnsignedBigInt
+  length      Float?
+  orange_id   Int
+  classe      String                          @db.VarChar(255)
+  status      String                          @db.VarChar(255)
+  composition String                          @db.VarChar(255)
+  geom        Unsupported("multilinestring")?
+  geoJson     String?                         @db.LongText
+  created_at  DateTime?                       @db.Timestamp(0)
+  updated_at  DateTime?                       @db.Timestamp(0)
+  path_room   path_room[]
+  sections    sections[]
+}
+
+model payment_methods {
+  id            BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at    DateTime?       @db.Timestamp(0)
+  updated_at    DateTime?       @db.Timestamp(0)
+  name          String          @db.TinyText
+  color         String          @db.TinyText
+  is_active     Boolean
+  contracts     contracts[]
+  payments      payments[]
+  subscriptions subscriptions[]
+}
+
+model payments {
+  id                BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at        DateTime?       @db.Timestamp(0)
+  updated_at        DateTime?       @db.Timestamp(0)
+  invoice_id        BigInt          @db.UnsignedBigInt
+  payment_method_id BigInt          @db.UnsignedBigInt
+  payment_reference String?         @db.VarChar(255)
+  comment           String?         @db.TinyText
+  value_eur         Float?
+  is_debit          Boolean
+  user_id           BigInt          @db.UnsignedBigInt
+  paid_at           DateTime?       @db.Date
+  invoices          invoices        @relation(fields: [invoice_id], references: [id], map: "payments_invoice_id_foreign")
+  payment_methods   payment_methods @relation(fields: [payment_method_id], references: [id], map: "payments_payment_method_id_foreign")
+  users             users           @relation(fields: [user_id], references: [id], map: "payments_user_id_foreign")
+
+  @@index([invoice_id], map: "payments_invoice_id_foreign")
+  @@index([payment_method_id], map: "payments_payment_method_id_foreign")
+  @@index([user_id], map: "payments_user_id_foreign")
+}
+
+model permissions {
+  id                    BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  name                  String                  @db.VarChar(255)
+  guard_name            String                  @db.VarChar(255)
+  created_at            DateTime?               @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  model_has_permissions model_has_permissions[]
+  role_has_permissions  role_has_permissions[]
+
+  @@unique([name, guard_name], map: "permissions_name_guard_name_unique")
+}
+
+model personal_access_tokens {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  tokenable_type String    @db.VarChar(255)
+  tokenable_id   BigInt    @db.UnsignedBigInt
+  name           String    @db.VarChar(255)
+  token          String    @unique(map: "personal_access_tokens_token_unique") @db.VarChar(64)
+  abilities      String?   @db.Text
+  last_used_at   DateTime? @db.Timestamp(0)
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+
+  @@index([tokenable_type, tokenable_id], map: "personal_access_tokens_tokenable_type_tokenable_id_index")
+}
+
+model phone_logs {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  verbosity  String    @db.TinyText
+  tag        String    @db.TinyText
+  message    String    @db.VarChar(255)
+  phone_id   BigInt    @db.UnsignedBigInt
+  phones     phones    @relation(fields: [phone_id], references: [id], onDelete: Cascade, map: "phone_logs_phone_id_foreign")
+
+  @@index([phone_id], map: "phone_logs_phone_id_foreign")
+}
+
+model phones {
+  id                     BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  name                   String       @db.VarChar(255)
+  device_id              String       @db.VarChar(255)
+  user_id                BigInt?      @db.UnsignedBigInt
+  created_at             DateTime?    @db.Timestamp(0)
+  updated_at             DateTime?    @db.Timestamp(0)
+  tracking_version_name  String?      @db.TinyText
+  tracking_version_code  Int?
+  available_version_code Int?
+  available_at           Boolean?
+  phone_logs             phone_logs[]
+  users                  users?       @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "phones_user_id_foreign")
+
+  @@index([user_id], map: "phones_user_id_foreign")
+}
+
+model product_categories {
+  id          BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at  DateTime?  @db.Timestamp(0)
+  updated_at  DateTime?  @db.Timestamp(0)
+  name        String     @db.TinyText
+  description String?    @db.Text
+  products    products[]
+  tickets     tickets[]
+}
+
+model product_characteristics {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  product_id BigInt    @db.UnsignedBigInt
+  name       String    @db.TinyText
+  value      String?   @db.TinyText
+  unit       String?   @db.TinyText
+  products   products  @relation(fields: [product_id], references: [id], onDelete: Cascade, map: "product_characteristics_product_id_foreign")
+
+  @@index([product_id], map: "product_characteristics_product_id_foreign")
+}
+
+model product_options {
+  id                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at               DateTime?                  @db.Timestamp(0)
+  updated_at               DateTime?                  @db.Timestamp(0)
+  product_id               BigInt                     @db.UnsignedBigInt
+  name                     String                     @db.TinyText
+  price                    Float
+  operating_cost           Float
+  is_monthly               Boolean
+  contract_product_options contract_product_options[]
+  products                 products                   @relation(fields: [product_id], references: [id], onDelete: Cascade, map: "product_options_product_id_foreign")
+
+  @@index([product_id], map: "product_options_product_id_foreign")
+}
+
+model product_variants {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+  product_id     BigInt    @db.UnsignedBigInt
+  min_commitment Int       @default(0)
+  price          Float     @default(0.00)
+  operating_cost Float     @default(0.00)
+  max_discount   Float?
+  products       products  @relation(fields: [product_id], references: [id], onDelete: Cascade, map: "product_variants_product_id_foreign")
+
+  @@index([product_id], map: "product_variants_product_id_foreign")
+}
+
+model products {
+  id                      BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at              DateTime?                 @db.Timestamp(0)
+  updated_at              DateTime?                 @db.Timestamp(0)
+  product_category_id     BigInt                    @db.UnsignedBigInt
+  name                    String                    @db.TinyText
+  description             String?                   @db.TinyText
+  max_discount_percent    Float                     @default(0.00)
+  is_monthly              Boolean                   @default(true)
+  pid                     String?                   @db.TinyText
+  is_b2b                  Boolean                   @default(false)
+  is_b2c                  Boolean                   @default(false)
+  is_quotation_needed     Boolean                   @default(false)
+  is_visible              Boolean                   @default(false)
+  is_anticipated_billing  Boolean                   @default(true)
+  contract_products       contract_products[]
+  product_characteristics product_characteristics[]
+  product_options         product_options[]
+  product_variants        product_variants[]
+  product_categories      product_categories        @relation(fields: [product_category_id], references: [id], onDelete: Cascade, map: "products_product_category_id_foreign")
+
+  @@index([product_category_id], map: "products_product_category_id_foreign")
+}
+
+model pullers {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  mission_id BigInt   @db.UnsignedBigInt
+  user_id    BigInt   @db.UnsignedBigInt
+  missions   missions @relation(fields: [mission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pullers_mission_id_foreign")
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "pullers_user_id_foreign")
+
+  @@index([mission_id], map: "pullers_mission_id_foreign")
+  @@index([user_id], map: "pullers_user_id_foreign")
+}
+
+model purchase_orders {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+  file        String    @db.VarChar(255)
+  user_id     BigInt    @db.UnsignedBigInt
+  contract_id BigInt    @db.UnsignedBigInt
+  comment     String?   @db.VarChar(255)
+  contracts   contracts @relation(fields: [contract_id], references: [id], onDelete: Cascade, map: "purchase_orders_contract_id_foreign")
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "purchase_orders_user_id_foreign")
+
+  @@index([contract_id], map: "purchase_orders_contract_id_foreign")
+  @@index([user_id], map: "purchase_orders_user_id_foreign")
+}
+
+model racks {
+  id            BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  name          String          @db.VarChar(255)
+  barcode       String?         @db.VarChar(255)
+  created_at    DateTime?       @db.Timestamp(0)
+  updated_at    DateTime?       @db.Timestamp(0)
+  material_rack material_rack[]
+}
+
+model reporting_status {
+  id                                                                 BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  name                                                               String            @db.VarChar(255)
+  color                                                              String            @db.VarChar(255)
+  created_at                                                         DateTime?         @db.Timestamp(0)
+  updated_at                                                         DateTime?         @db.Timestamp(0)
+  room_reportings_room_reportings_reporting_statusToreporting_status room_reportings[] @relation("room_reportings_reporting_statusToreporting_status")
+}
+
+model role_has_permissions {
+  permission_id BigInt      @db.UnsignedBigInt
+  role_id       BigInt      @db.UnsignedBigInt
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "role_has_permissions_permission_id_foreign")
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "role_has_permissions_role_id_foreign")
+
+  @@id([permission_id, role_id])
+  @@index([role_id], map: "role_has_permissions_role_id_foreign")
+}
+
+model roles {
+  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  name                 String                 @db.VarChar(255)
+  guard_name           String                 @db.VarChar(255)
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  model_has_roles      model_has_roles[]
+  role_has_permissions role_has_permissions[]
+
+  @@unique([name, guard_name], map: "roles_name_guard_name_unique")
+}
+
+model room_audits {
+  id                    BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at            DateTime?            @db.Timestamp(0)
+  updated_at            DateTime?            @db.Timestamp(0)
+  room_id               BigInt               @db.UnsignedBigInt
+  user_id               BigInt?              @db.UnsignedBigInt
+  overview_picture      String?              @db.VarChar(255)
+  top_view_picture      String?              @db.VarChar(255)
+  comment               String               @default("") @db.Text
+  closed_at             DateTime?            @db.Timestamp(0)
+  started_at            DateTime?            @db.Timestamp(0)
+  has_box               Boolean?
+  is_conform            Boolean?
+  is_wire_non_conform   Boolean?
+  is_sheath_non_conform Boolean?
+  is_label_non_conform  Boolean?
+  is_box_non_conform    Boolean?
+  non_conform_comment   String?              @db.Text
+  section_reporting_id  BigInt?              @db.UnsignedBigInt
+  rooms                 rooms                @relation(fields: [room_id], references: [id], onDelete: Cascade, map: "room_audits_room_id_foreign")
+  users                 users?               @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "room_audits_user_id_foreign")
+  room_box_audits       room_box_audits[]
+  room_socket_audits    room_socket_audits[]
+
+  @@index([room_id], map: "room_audits_room_id_foreign")
+  @@index([user_id], map: "room_audits_user_id_foreign")
+}
+
+model room_box_audit_tape_photos {
+  id                BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  room_box_audit_id BigInt          @db.UnsignedBigInt
+  picture           String?         @db.VarChar(255)
+  created_at        DateTime?       @db.Timestamp(0)
+  updated_at        DateTime?       @db.Timestamp(0)
+  room_box_audits   room_box_audits @relation(fields: [room_box_audit_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "box_audit_tape_photos_box_audit_id_foreign")
+
+  @@index([room_box_audit_id], map: "box_audit_tape_photos_box_audit_id_foreign")
+}
+
+model room_box_audits {
+  id                         BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  room_audit_id              BigInt                       @db.UnsignedBigInt
+  box_type_id                BigInt                       @db.UnsignedBigInt
+  box_picture                String?                      @db.VarChar(255)
+  has_right_ecams            Boolean                      @default(true)
+  ecams_picture              String?                      @db.VarChar(255)
+  created_at                 DateTime?                    @db.Timestamp(0)
+  updated_at                 DateTime?                    @db.Timestamp(0)
+  room_box_audit_tape_photos room_box_audit_tape_photos[]
+  box_types                  box_types                    @relation(fields: [box_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "box_audits_box_type_id_foreign")
+  room_audits                room_audits                  @relation(fields: [room_audit_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "box_audits_room_audit_id_foreign")
+
+  @@index([box_type_id], map: "box_audits_box_type_id_foreign")
+  @@index([room_audit_id], map: "box_audits_room_audit_id_foreign")
+}
+
+model room_photos {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  file       String    @db.VarChar(255)
+  comment    String?   @db.VarChar(255)
+  room_id    BigInt    @db.UnsignedBigInt
+  user_id    BigInt    @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  rooms      rooms     @relation(fields: [room_id], references: [id], onDelete: Cascade, map: "room_photos_room_id_foreign")
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "room_photos_user_id_foreign")
+
+  @@index([room_id], map: "room_photos_room_id_foreign")
+  @@index([user_id], map: "room_photos_user_id_foreign")
+}
+
+model room_reportings {
+  id                                                                  BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  room_segment_id                                                     BigInt?          @db.UnsignedBigInt
+  photo_label_start                                                   String?          @db.VarChar(255)
+  photo_label_end                                                     String?          @db.VarChar(255)
+  photo_global                                                        String?          @db.VarChar(255)
+  comment                                                             String?          @db.Text
+  reporting_status                                                    BigInt           @default(1) @db.UnsignedBigInt
+  comment_check                                                       String?          @db.Text
+  created_at                                                          DateTime?        @db.Timestamp(0)
+  updated_at                                                          DateTime?        @db.Timestamp(0)
+  reporting_status_room_reportings_reporting_statusToreporting_status reporting_status @relation("room_reportings_reporting_statusToreporting_status", fields: [reporting_status], references: [id], onUpdate: Restrict, map: "room_reportings_reporting_status_foreign")
+  room_segment                                                        room_segment?    @relation(fields: [room_segment_id], references: [id], onDelete: Cascade, map: "room_reportings_room_segment_id_foreign")
+
+  @@index([reporting_status], map: "room_reportings_reporting_status_foreign")
+  @@index([room_segment_id], map: "room_reportings_room_segment_id_foreign")
+}
+
+model room_segment {
+  id              BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  room_id         BigInt            @db.UnsignedBigInt
+  segment_id      BigInt            @db.UnsignedBigInt
+  room_reportings room_reportings[]
+  rooms           rooms             @relation(fields: [room_id], references: [id], onDelete: Cascade, map: "room_segment_room_id_foreign")
+  segments        segments          @relation(fields: [segment_id], references: [id], onDelete: Cascade, map: "room_segment_segment_id_foreign")
+
+  @@index([room_id], map: "room_segment_room_id_foreign")
+  @@index([segment_id], map: "room_segment_segment_id_foreign")
+}
+
+model room_socket_audits {
+  id             BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at     DateTime?   @db.Timestamp(0)
+  updated_at     DateTime?   @db.Timestamp(0)
+  room_audit_id  BigInt      @db.UnsignedBigInt
+  socket_picture String?     @db.VarChar(255)
+  label_picture  String?     @db.VarChar(255)
+  comment        String?     @db.Text
+  room_audits    room_audits @relation(fields: [room_audit_id], references: [id], onDelete: Cascade, map: "room_socket_audits_room_audit_id_foreign")
+
+  @@index([room_audit_id], map: "room_socket_audits_room_audit_id_foreign")
+}
+
+model room_types {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  code       String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  rooms      rooms[]
+}
+
+model rooms {
+  id           BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  implant      String                @db.VarChar(255)
+  code_ch1     String                @db.VarChar(255)
+  code_ch2     String                @db.VarChar(255)
+  geom         Unsupported("point")?
+  geoJson      String?               @db.LongText
+  photo        String?               @db.VarChar(255)
+  comment      String?               @db.Text
+  type_id      BigInt?               @db.UnsignedBigInt
+  created_at   DateTime?             @db.Timestamp(0)
+  updated_at   DateTime?             @db.Timestamp(0)
+  boxes        boxes[]
+  path_room    path_room[]
+  room_audits  room_audits[]
+  room_photos  room_photos[]
+  room_segment room_segment[]
+  room_types   room_types?           @relation(fields: [type_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "rooms_type_id_foreign")
+
+  @@index([type_id], map: "rooms_type_id_foreign")
+}
+
+model section_reporting_photos {
+  id                   BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  section_reporting_id BigInt             @db.UnsignedBigInt
+  picture              String?            @db.VarChar(255)
+  created_at           DateTime?          @db.Timestamp(0)
+  updated_at           DateTime?          @db.Timestamp(0)
+  section_reportings   section_reportings @relation(fields: [section_reporting_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "section_reporting_photos_section_reporting_id_foreign")
+
+  @@index([section_reporting_id], map: "section_reporting_photos_section_reporting_id_foreign")
+}
+
+model section_reportings {
+  id                        BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  section_status_history_id BigInt                     @db.UnsignedBigInt
+  room_id                   BigInt?                    @db.UnsignedBigInt
+  overview_picture          String?                    @db.VarChar(255)
+  top_view_picture          String?                    @db.VarChar(255)
+  comment                   String?                    @db.VarChar(255)
+  created_at                DateTime?                  @db.Timestamp(0)
+  updated_at                DateTime?                  @db.Timestamp(0)
+  section_reporting_photos  section_reporting_photos[]
+  section_status_histories  section_status_histories   @relation(fields: [section_status_history_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "section_reportings_section_status_history_id_foreign")
+
+  @@index([section_status_history_id], map: "section_reportings_section_status_history_id_foreign")
+}
+
+model section_status_histories {
+  id                 BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  section_status_id  BigInt               @db.UnsignedBigInt
+  section_id         BigInt               @db.UnsignedBigInt
+  user_id            BigInt               @db.UnsignedBigInt
+  created_at         DateTime?            @db.Timestamp(0)
+  updated_at         DateTime?            @db.Timestamp(0)
+  section_reportings section_reportings[]
+  sections           sections             @relation(fields: [section_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "section_status_histories_section_id_foreign")
+  section_statuses   section_statuses     @relation(fields: [section_status_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "section_status_histories_section_status_id_foreign")
+  users              users                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "section_status_histories_user_id_foreign")
+
+  @@index([section_id], map: "section_status_histories_section_id_foreign")
+  @@index([section_status_id], map: "section_status_histories_section_status_id_foreign")
+  @@index([user_id], map: "section_status_histories_user_id_foreign")
+}
+
+model section_statuses {
+  id                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  name                     String                     @db.TinyText
+  color                    String                     @db.TinyText
+  section_status_histories section_status_histories[]
+}
+
+model sections {
+  id                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  path_id                  BigInt                     @db.UnsignedBigInt
+  segment_id               BigInt                     @db.UnsignedBigInt
+  section_status_id        BigInt                     @default(1) @db.UnsignedBigInt
+  section_status_histories section_status_histories[]
+  paths                    paths                      @relation(fields: [path_id], references: [id], onDelete: Cascade, map: "path_segment_path_id_foreign")
+  segments                 segments                   @relation(fields: [segment_id], references: [id], onDelete: Cascade, map: "path_segment_segment_id_foreign")
+
+  @@index([path_id], map: "path_segment_path_id_foreign")
+  @@index([segment_id], map: "path_segment_segment_id_foreign")
+}
+
+model segment_status_histories {
+  id               BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at       DateTime?        @db.Timestamp(0)
+  updated_at       DateTime?        @db.Timestamp(0)
+  status_id        BigInt           @db.UnsignedBigInt
+  segment_id       BigInt           @db.UnsignedBigInt
+  segments         segments         @relation(fields: [segment_id], references: [id], onDelete: Cascade, map: "segment_status_histories_segment_id_foreign")
+  segment_statuses segment_statuses @relation(fields: [status_id], references: [id], onUpdate: Restrict, map: "segment_status_histories_status_id_foreign")
+
+  @@index([segment_id], map: "segment_status_histories_segment_id_foreign")
+  @@index([status_id], map: "segment_status_histories_status_id_foreign")
+}
+
+model segment_statuses {
+  id                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  name                     String                     @db.VarChar(255)
+  color                    String                     @db.VarChar(255)
+  icon                     String                     @db.VarChar(255)
+  created_at               DateTime?                  @db.Timestamp(0)
+  updated_at               DateTime?                  @db.Timestamp(0)
+  segment_status_histories segment_status_histories[]
+  segments                 segments[]
+}
+
+model segments {
+  id                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  reference                String                     @db.VarChar(255)
+  file                     String?                    @db.VarChar(255)
+  night                    Boolean                    @default(false)
+  capacity_id              BigInt?                    @db.UnsignedBigInt
+  wire_id                  BigInt?                    @db.UnsignedBigInt
+  status_id                BigInt?                    @db.UnsignedBigInt
+  mission_id               BigInt                     @db.UnsignedBigInt
+  wire_is_scan             Boolean                    @default(false)
+  created_at               DateTime?                  @db.Timestamp(0)
+  updated_at               DateTime?                  @db.Timestamp(0)
+  index                    Int?
+  box_segment              box_segment[]
+  room_segment             room_segment[]
+  sections                 sections[]
+  segment_status_histories segment_status_histories[]
+  wire_capacities          wire_capacities?           @relation(fields: [capacity_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "segments_capacity_id_foreign")
+  missions                 missions                   @relation(fields: [mission_id], references: [id], onDelete: Cascade, map: "segments_mission_id_foreign")
+  segment_statuses         segment_statuses?          @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "segments_status_id_foreign")
+  wires                    wires?                     @relation(fields: [wire_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "segments_wire_id_foreign")
+  tubes                    tubes[]
+
+  @@index([capacity_id], map: "segments_capacity_id_foreign")
+  @@index([mission_id], map: "segments_mission_id_foreign")
+  @@index([status_id], map: "segments_status_id_foreign")
+  @@index([wire_id], map: "segments_wire_id_foreign")
+}
+
+model social_providers {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id     BigInt    @db.UnsignedBigInt
+  provider    String    @db.VarChar(255)
+  provider_id String    @db.VarChar(255)
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "social_providers_user_id_foreign")
+
+  @@index([provider_id], map: "social_providers_provider_id_index")
+  @@index([provider], map: "social_providers_provider_index")
+  @@index([user_id], map: "social_providers_user_id_foreign")
+}
+
+model socket_sizes {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  sockets    sockets[]
+}
+
+model sockets {
+  id           BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  size_id      BigInt?       @db.UnsignedBigInt
+  created_at   DateTime?     @db.Timestamp(0)
+  updated_at   DateTime?     @db.Timestamp(0)
+  socket_sizes socket_sizes? @relation(fields: [size_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "sockets_size_id_foreign")
+
+  @@index([size_id], map: "sockets_size_id_foreign")
+}
+
+model subscription_deadlines {
+  id                        BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at                DateTime?     @db.Timestamp(0)
+  updated_at                DateTime?     @db.Timestamp(0)
+  subscription_id           BigInt        @db.UnsignedBigInt
+  due_at                    DateTime      @db.Date
+  pro_rata_discount_percent Float         @default(0.00)
+  invoices                  invoices[]
+  subscriptions             subscriptions @relation(fields: [subscription_id], references: [id], onDelete: Cascade, map: "subscription_deadlines_subscription_id_foreign")
+
+  @@index([subscription_id], map: "subscription_deadlines_subscription_id_foreign")
+}
+
+model subscription_products {
+  id                         BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at                 DateTime?         @db.Timestamp(0)
+  updated_at                 DateTime?         @db.Timestamp(0)
+  subscription_id            BigInt            @db.UnsignedBigInt
+  contract_product_id        BigInt            @db.UnsignedBigInt
+  is_active                  Boolean           @default(true)
+  is_operating_cost_invoiced Boolean           @default(false)
+  contract_products          contract_products @relation(fields: [contract_product_id], references: [id], onDelete: Cascade, map: "subscription_products_contract_product_id_foreign")
+  subscriptions              subscriptions     @relation(fields: [subscription_id], references: [id], onDelete: Cascade, map: "subscription_products_subscription_id_foreign")
+
+  @@index([contract_product_id], map: "subscription_products_contract_product_id_foreign")
+  @@index([subscription_id], map: "subscription_products_subscription_id_foreign")
+}
+
+model subscription_status_histories {
+  id                     BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at             DateTime?             @db.Timestamp(0)
+  updated_at             DateTime?             @db.Timestamp(0)
+  subscription_id        BigInt                @db.UnsignedBigInt
+  subscription_status_id BigInt                @db.UnsignedBigInt
+  user_id                BigInt                @db.UnsignedBigInt
+  subscriptions          subscriptions         @relation(fields: [subscription_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "subscription_status_histories_subscription_id_foreign")
+  subscription_statuses  subscription_statuses @relation(fields: [subscription_status_id], references: [id], onDelete: Cascade, map: "subscription_status_histories_subscription_status_id_foreign")
+  users                  users                 @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "subscription_status_histories_user_id_foreign")
+
+  @@index([subscription_id], map: "subscription_status_histories_subscription_id_foreign")
+  @@index([subscription_status_id], map: "subscription_status_histories_subscription_status_id_foreign")
+  @@index([user_id], map: "subscription_status_histories_user_id_foreign")
+}
+
+model subscription_statuses {
+  id                            BigInt                          @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at                    DateTime?                       @db.Timestamp(0)
+  updated_at                    DateTime?                       @db.Timestamp(0)
+  name                          String                          @db.TinyText
+  color                         String                          @db.TinyText
+  is_active                     Boolean
+  subscription_status_histories subscription_status_histories[]
+  subscriptions                 subscriptions[]
+}
+
+model subscriptions {
+  id                            BigInt                          @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at                    DateTime?                       @db.Timestamp(0)
+  updated_at                    DateTime?                       @db.Timestamp(0)
+  contract_id                   BigInt                          @db.UnsignedBigInt
+  subscription_status_id        BigInt                          @db.UnsignedBigInt
+  payment_method_id             BigInt                          @db.UnsignedBigInt
+  started_at                    DateTime?                       @db.Date
+  comment                       String?                         @db.Text
+  invoices                      invoices[]
+  subscription_deadlines        subscription_deadlines[]
+  subscription_products         subscription_products[]
+  subscription_status_histories subscription_status_histories[]
+  contracts                     contracts                       @relation(fields: [contract_id], references: [id], map: "subscriptions_contract_id_foreign")
+  payment_methods               payment_methods                 @relation(fields: [payment_method_id], references: [id], map: "subscriptions_payment_method_id_foreign")
+  subscription_statuses         subscription_statuses           @relation(fields: [subscription_status_id], references: [id], map: "subscriptions_subscription_status_id_foreign")
+
+  @@index([contract_id], map: "subscriptions_contract_id_foreign")
+  @@index([payment_method_id], map: "subscriptions_payment_method_id_foreign")
+  @@index([subscription_status_id], map: "subscriptions_subscription_status_id_foreign")
+}
+
+model tasks {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @db.Timestamp(0)
+  type         Boolean?
+  description  String?   @db.VarChar(255)
+  date         DateTime? @db.Date
+  time         DateTime? @db.Time(0)
+  contact      String?   @db.VarChar(255)
+  notification Boolean?
+  affectation  Boolean?
+  note         String?   @db.VarChar(255)
+  priority     Boolean?
+}
+
+model telescope_entries {
+  sequence                BigInt                   @id @default(autoincrement()) @db.UnsignedBigInt
+  uuid                    String                   @unique(map: "telescope_entries_uuid_unique") @db.Char(36)
+  batch_id                String                   @db.Char(36)
+  family_hash             String?                  @db.VarChar(255)
+  should_display_on_index Boolean                  @default(true)
+  type                    String                   @db.VarChar(20)
+  content                 String                   @db.LongText
+  created_at              DateTime?                @db.DateTime(0)
+  telescope_entries_tags  telescope_entries_tags[] @ignore
+
+  @@index([batch_id], map: "telescope_entries_batch_id_index")
+  @@index([created_at], map: "telescope_entries_created_at_index")
+  @@index([family_hash], map: "telescope_entries_family_hash_index")
+  @@index([type, should_display_on_index], map: "telescope_entries_type_should_display_on_index_index")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model telescope_entries_tags {
+  entry_uuid        String            @db.Char(36)
+  tag               String            @db.VarChar(255)
+  telescope_entries telescope_entries @relation(fields: [entry_uuid], references: [uuid], onDelete: Cascade, onUpdate: Restrict, map: "telescope_entries_tags_entry_uuid_foreign")
+
+  @@index([entry_uuid, tag], map: "telescope_entries_tags_entry_uuid_tag_index")
+  @@index([tag], map: "telescope_entries_tags_tag_index")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model telescope_monitoring {
+  tag String @db.VarChar(255)
+
+  @@ignore
+}
+
+model ticket_messages {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  body       String    @db.Text
+  ticket_id  BigInt    @db.UnsignedBigInt
+  user_id    BigInt    @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  tickets    tickets   @relation(fields: [ticket_id], references: [id], onDelete: Cascade, map: "ticket_messages_ticket_id_foreign")
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "ticket_messages_user_id_foreign")
+
+  @@index([ticket_id], map: "ticket_messages_ticket_id_foreign")
+  @@index([user_id], map: "ticket_messages_user_id_foreign")
+}
+
+model ticket_priorities {
+  id                       BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name                     String    @db.VarChar(255)
+  color                    String    @db.VarChar(255)
+  created_at               DateTime? @db.Timestamp(0)
+  updated_at               DateTime? @db.Timestamp(0)
+  notification_delay_hours Int       @default(3)
+  is_active                Boolean   @default(true)
+  tickets                  tickets[]
+}
+
+model ticket_status_histories {
+  id               BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at       DateTime?       @db.Timestamp(0)
+  updated_at       DateTime?       @db.Timestamp(0)
+  ticket_id        BigInt          @db.UnsignedBigInt
+  ticket_status_id BigInt          @db.UnsignedBigInt
+  user_id          BigInt          @db.UnsignedBigInt
+  tickets          tickets         @relation(fields: [ticket_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "ticket_status_histories_ticket_id_foreign")
+  ticket_statuses  ticket_statuses @relation(fields: [ticket_status_id], references: [id], onDelete: Cascade, map: "ticket_status_histories_ticket_status_id_foreign")
+  users            users           @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "ticket_status_histories_user_id_foreign")
+
+  @@index([ticket_id], map: "ticket_status_histories_ticket_id_foreign")
+  @@index([ticket_status_id], map: "ticket_status_histories_ticket_status_id_foreign")
+  @@index([user_id], map: "ticket_status_histories_user_id_foreign")
+}
+
+model ticket_statuses {
+  id                      BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  name                    String                    @db.VarChar(255)
+  color                   String                    @db.VarChar(255)
+  created_at              DateTime?                 @db.Timestamp(0)
+  updated_at              DateTime?                 @db.Timestamp(0)
+  is_active               Boolean                   @default(true)
+  ticket_status_histories ticket_status_histories[]
+  tickets                 tickets[]
+}
+
+model tickets {
+  id                      BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  body                    String                    @db.Text
+  client_id               BigInt                    @db.UnsignedBigInt
+  status_id               BigInt                    @db.UnsignedBigInt
+  category_id             BigInt?                   @db.UnsignedBigInt
+  priority_id             BigInt?                   @db.UnsignedBigInt
+  created_at              DateTime?                 @db.Timestamp(0)
+  updated_at              DateTime?                 @db.Timestamp(0)
+  notified_at             DateTime?                 @db.DateTime(0)
+  assigned_to             BigInt?                   @db.UnsignedBigInt
+  ticket_messages         ticket_messages[]
+  ticket_status_histories ticket_status_histories[]
+  users                   users?                    @relation(fields: [assigned_to], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tickets_assigned_to_foreign")
+  product_categories      product_categories?       @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "tickets_category_id_foreign")
+  clients                 clients                   @relation(fields: [client_id], references: [id], onDelete: Cascade, map: "tickets_client_id_foreign")
+  ticket_priorities       ticket_priorities?        @relation(fields: [priority_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "tickets_priority_id_foreign")
+  ticket_statuses         ticket_statuses           @relation(fields: [status_id], references: [id], onUpdate: Restrict, map: "tickets_status_id_foreign")
+
+  @@index([assigned_to], map: "tickets_assigned_to_foreign")
+  @@index([category_id], map: "tickets_category_id_foreign")
+  @@index([client_id], map: "tickets_client_id_foreign")
+  @@index([priority_id], map: "tickets_priority_id_foreign")
+  @@index([status_id], map: "tickets_status_id_foreign")
+}
+
+model tubes {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  color      String    @db.TinyText
+  index      Int       @db.TinyInt
+  segment_id BigInt    @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  fibers     fibers[]
+  segments   segments  @relation(fields: [segment_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "tubes_segment_id_foreign")
+
+  @@index([segment_id], map: "tubes_segment_id_foreign")
+}
+
+model user_locations {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  lat        Float?
+  lng        Float?
+  accuracy   Float?
+  user_id    BigInt    @db.UnsignedBigInt
+  battery    Int?
+  timestamp  DateTime? @db.Timestamp(0)
+  uptime     DateTime? @db.Timestamp(0)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "user_locations_user_id_foreign")
+
+  @@index([timestamp, accuracy], map: "user_locations_timestamp_accuracy_index")
+  @@index([user_id], map: "user_locations_user_id_foreign")
+}
+
+model users {
+  id                                        BigInt                          @id @default(autoincrement()) @db.UnsignedBigInt
+  firstname                                 String                          @db.VarChar(255)
+  lastname                                  String                          @db.VarChar(255)
+  color                                     String?                         @db.VarChar(255)
+  email                                     String                          @unique(map: "users_email_unique") @db.VarChar(255)
+  email_verified_at                         DateTime?                       @db.Timestamp(0)
+  password                                  String                          @db.VarChar(255)
+  remember_token                            String?                         @db.VarChar(100)
+  created_at                                DateTime?                       @db.Timestamp(0)
+  updated_at                                DateTime?                       @db.Timestamp(0)
+  avatar                                    String?                         @db.VarChar(255)
+  role                                      String?                         @default("USER") @db.VarChar(255)
+  is_desactivated                           Boolean                         @default(false)
+  Session                                   Session[]
+  Token                                     Token[]
+  clients_clients_commercial_user_idTousers clients[]                       @relation("clients_commercial_user_idTousers")
+  clients_clients_user_idTousers            clients[]                       @relation("clients_user_idTousers")
+  commercial_partner_documents              commercial_partner_documents[]
+  contract_status_histories                 contract_status_histories[]
+  mission_puller                            mission_puller[]
+  missions                                  missions[]
+  payments                                  payments[]
+  phones                                    phones[]
+  pullers                                   pullers[]
+  purchase_orders                           purchase_orders[]
+  room_audits                               room_audits[]
+  room_photos                               room_photos[]
+  section_status_histories                  section_status_histories[]
+  social_providers                          social_providers[]
+  subscription_status_histories             subscription_status_histories[]
+  ticket_messages                           ticket_messages[]
+  ticket_status_histories                   ticket_status_histories[]
+  tickets                                   tickets[]
+  user_locations                            user_locations[]
+  wire_histories                            wire_histories[]
+}
+
+model weldings {
+  id                              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  is_welded                       Boolean   @default(false)
+  index                           Int
+  from_id                         BigInt    @db.UnsignedBigInt
+  to_id                           BigInt    @db.UnsignedBigInt
+  cassette_id                     BigInt    @db.UnsignedBigInt
+  created_at                      DateTime? @db.Timestamp(0)
+  updated_at                      DateTime? @db.Timestamp(0)
+  cassettes                       cassettes @relation(fields: [cassette_id], references: [id], onUpdate: Restrict, map: "weldings_cassette_id_foreign")
+  fibers_weldings_from_idTofibers fibers    @relation("weldings_from_idTofibers", fields: [from_id], references: [id], onUpdate: Restrict, map: "weldings_from_id_foreign")
+  fibers_weldings_to_idTofibers   fibers    @relation("weldings_to_idTofibers", fields: [to_id], references: [id], onUpdate: Restrict, map: "weldings_to_id_foreign")
+
+  @@index([cassette_id], map: "weldings_cassette_id_foreign")
+  @@index([from_id], map: "weldings_from_id_foreign")
+  @@index([to_id], map: "weldings_to_id_foreign")
+}
+
+model wire_capacities {
+  id         BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  value      Int
+  created_at DateTime?  @db.Timestamp(0)
+  updated_at DateTime?  @db.Timestamp(0)
+  modulo_id  BigInt?    @db.UnsignedBigInt
+  color_code String?    @db.LongText
+  segments   segments[]
+  modulos    modulos?   @relation(fields: [modulo_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "wire_capacities_modulo_id_foreign")
+  wires      wires[]
+
+  @@index([modulo_id], map: "wire_capacities_modulo_id_foreign")
+}
+
+model wire_histories {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  wire_id    BigInt    @db.UnsignedBigInt
+  user_id    BigInt    @db.UnsignedBigInt
+  length     Int
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "wire_histories_user_id_foreign")
+  wires      wires     @relation(fields: [wire_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "wire_histories_wire_id_foreign")
+
+  @@index([user_id], map: "wire_histories_user_id_foreign")
+  @@index([wire_id], map: "wire_histories_wire_id_foreign")
+}
+
+model wire_types {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @db.VarChar(100)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  wires      wires[]
+}
+
+model wires {
+  id              BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  length          Int
+  capacity_id     BigInt?          @db.UnsignedBigInt
+  type_id         BigInt?          @db.UnsignedBigInt
+  modulo_id       BigInt?          @db.UnsignedBigInt
+  created_at      DateTime?        @db.Timestamp(0)
+  updated_at      DateTime?        @db.Timestamp(0)
+  location        String?          @db.TinyText
+  segments        segments[]
+  wire_histories  wire_histories[]
+  wire_capacities wire_capacities? @relation(fields: [capacity_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "wires_capacity_id_foreign")
+  modulos         modulos?         @relation(fields: [modulo_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "wires_modulo_id_foreign")
+  wire_types      wire_types?      @relation(fields: [type_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "wires_type_id_foreign")
+
+  @@index([capacity_id], map: "wires_capacity_id_foreign")
+  @@index([modulo_id], map: "wires_modulo_id_foreign")
+  @@index([type_id], map: "wires_type_id_foreign")
+}
